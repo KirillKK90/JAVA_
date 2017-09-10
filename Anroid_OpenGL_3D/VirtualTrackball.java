@@ -11,7 +11,9 @@ public class VirtualTrackball {
      */
     final float TRACKBALLSIZE = 0.7f;
 
-    VirtualTrackball() {
+    VirtualTrackball()
+    {
+
     }
 
     static void vzero(float[] v) {
@@ -99,21 +101,6 @@ public class VirtualTrackball {
         dst[2] = src1[2] + src2[2];
     }
 
-
-     /*
-     * Pass the x and y coordinates of the last and current positions of
-     * the mouse, scaled so they are from (-1.0 ... 1.0).
-     *
-     * The resulting rotation is returned as a quaternion rotation.
-     */
-    Quaternion generate_quaternion_from_swipe(float p1x, float p1y, float p2x, float p2y) {
-        float[] q = new float[4];
-        gen_quat_from_swipe_internal(q, p1x, p1y, p2x, p2y);
-        Quaternion o_quat = new Quaternion(q[0], q[1], q[2], q[3]);
-
-        return o_quat;
-    }
-
     /*
      * Ok, simulate a track-ball.  Project the points onto the virtual
      * trackball, then figure out the axis of rotation, which is the cross
@@ -126,7 +113,7 @@ public class VirtualTrackball {
      * It is assumed that the arguments to this routine are in the range
      * (-1.0 ... 1.0)
      */
-    private void gen_quat_from_swipe_internal(float[] q, float p1x, float p1y, float p2x, float p2y) {
+    void gfs_gl_trackball(float[] q, float p1x, float p1y, float p2x, float p2y) {
         if (q.length < 4) {
             throw new RuntimeException("Wrong input array length!");
         }
@@ -170,13 +157,13 @@ public class VirtualTrackball {
         if (t < -1.0) t = -1.0f;
         phi = 2.0f * (float)Math.asin(t);
 
-        axis_to_quat(a, phi, q);
+        gfs_gl_axis_to_quat(a, phi, q);
     }
 
     /*
      *  Given an axis and angle, compute quaternion.
      */
-    void axis_to_quat(float[] a, float phi, float[] q) {
+    void gfs_gl_axis_to_quat(float[] a, float phi, float[] q) {
         if (a.length < 3 || q.length < 4) {
             throw new RuntimeException("Wrong input array length!");
         }
@@ -203,18 +190,6 @@ public class VirtualTrackball {
         return z;
     }
 
-
-    Quaternion combine_2rotations_using_quaternions(Quaternion i_q1, Quaternion i_q2) {
-        float[] q1fa = new float[4];
-        float[] q2fa = new float[4];
-        float[] resQuatFloatArr = new float[4];
-        i_q1.GetAsFloatArray(q1fa);
-        i_q1.GetAsFloatArray(q2fa);
-        sum_rots_from_2quats_internal(q1fa, q2fa, resQuatFloatArr);
-        Quaternion q = new Quaternion(resQuatFloatArr);
-
-        return q;
-    }
 /*
  * Given two rotations, e1 and e2, expressed as quaternion rotations,
  * figure out the equivalent single rotation and stuff it into dest.
@@ -229,7 +204,7 @@ public class VirtualTrackball {
     final int RENORMCOUNT = 97;
     static int count = 0;
 
-    public void sum_rots_from_2quats_internal(float[] q1, float[] q2, float[] dest) {
+    public void gfs_gl_add_quats(float[] q1, float[] q2, float[] dest) {
         if (q1.length < 4 || q2.length < 4 || dest.length < 4) {
             throw new RuntimeException("Wrong input array length!");
         }
@@ -265,6 +240,13 @@ public class VirtualTrackball {
      * Quaternions always obey:  a^2 + b^2 + c^2 + d^2 = 1.0
      * If they don't add up to 1.0, dividing by their magnitued will
      * renormalize them.
+     *
+     * Note: See the following for more information on quaternions:
+     *
+     * - Shoemake, K., Animating rotation with quaternion curves, Computer
+     *   Graphics 19, No 3 (Proc. SIGGRAPH'85), 245-254, 1985.
+     * - Pletinckx, D., Quaternion calculus as a basic tool in computer
+     *   graphics, The Visual Computer 5, 2-13, 1989.
      */
     static void
     normalize_quat(float[] q) {
@@ -282,7 +264,7 @@ public class VirtualTrackball {
      * Build a rotation matrix, given a quaternion rotation.
      *
      */
-    void build_rotmatrix(float[][] m, float[] q) {
+    void gfs_gl_build_rotmatrix(float[][] m, float[] q) {
         if (m.length < 4 || m[0].length < 4 || q.length < 4) {
             throw new RuntimeException("Wrong input array length!");
         }
@@ -306,5 +288,25 @@ public class VirtualTrackball {
         m[3][1] = 0.0f;
         m[3][2] = 0.0f;
         m[3][3] = 1.0f;
+    }
+
+    public void given_quaternion_get_angleaxis(float[] q, float[] angleAxis) {
+        if (q[3] > 1)  // if w>1 acos and sqrt will produce errors, this cant happen if quaternion is normalised
+        {
+            throw new RuntimeException();
+            //q1.normalise();
+        }
+        angleAxis[0] = 2 * (float)Math.acos(q[3]);
+        float s = (float)Math.sqrt(1 - q[3] * q[3]); // assuming quaternion normalised then w is less than 1, so term always positive.
+        if (s < 0.001) { // test to avoid divide by zero, s is always positive due to sqrt
+            // if s close to zero then direction of axis not important
+            angleAxis[1] = q[0]; // if it is important that axis is normalised then replace with x=1; y=z=0;
+            angleAxis[2] = q[1];
+            angleAxis[3] = q[2];
+        } else {
+            angleAxis[1] = q[0] / s; // normalise axis
+            angleAxis[2] = q[1] / s;
+            angleAxis[3] = q[2] / s;
+        }
     }
 }

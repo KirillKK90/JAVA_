@@ -42,10 +42,15 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     private float mScreenWidth;
     private float mScreenHeight;
 
-    private Quaternion mQuat = new Quaternion();
+    private float[] mQuat = new float[4]; // x y z w axis, angle
 
     public MyGLRenderer(Context context) {
         mContext = context;
+        //quat set identity
+        mQuat[0] = 0;
+        mQuat[1] = 0;
+        mQuat[2] = 0;
+        mQuat[3] = 1;
     }
 
     @Override
@@ -69,9 +74,8 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
     public void get3DRotation(float[] angleAxis)
     {
-        VirtualTrackball vTrackball = new VirtualTrackball();
-        Quaternion thisRotQuat = new Quaternion();
-        Quaternion resQuat = new Quaternion();
+        VirtualTrackball vT = new VirtualTrackball();
+        float[] thisRotQuat = new float[4];
 
         float sceneX = (mX / mScreenWidth)*2.0f - 1.0f;
         float sceneY = (mY / mScreenHeight)*-2.0f + 1.0f;
@@ -79,12 +83,17 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         float scenePrevX = (mPreviousX / mScreenWidth)*2.0f - 1.0f;
         float scenePrevY = (mPreviousY / mScreenHeight)*-2.0f + 1.0f;
 
-        thisRotQuat.Assign(vTrackball.generate_quaternion_from_swipe(scenePrevX, scenePrevY, sceneX, sceneY));
+        vT.gfs_gl_trackball(thisRotQuat, scenePrevX, scenePrevY, sceneX, sceneY);
 
-        resQuat.Assign(vTrackball.combine_2rotations_using_quaternions(thisRotQuat, mQuat));
-        mQuat.Assign(resQuat);
+        float[] resQuat = new float[4];
+        vT.gfs_gl_add_quats(thisRotQuat, mQuat, resQuat);
+        // combine2rotationsQuats(thisRotQuat, mQuat, resQuat);
+        mQuat[0] = resQuat[0];
+        mQuat[1] = resQuat[1];
+        mQuat[2] = resQuat[2];
+        mQuat[3] = resQuat[3];
 
-        resQuat.GetAngleAxis(angleAxis);
+        vT.given_quaternion_get_angleaxis(resQuat, angleAxis);
     }
 
     @Override
